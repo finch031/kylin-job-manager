@@ -80,4 +80,22 @@ public class KylinJdbcServiceImpl implements IKylinJdbcService {
         });
         return count != null ? count : 0;
     }
+
+    @Override
+    public int cubeSegmentTotalRecordCount(String cube) {
+        String tableName = cube.substring(0,cube.length() - 5);
+        String sql = "select count(1) from " + tableName;
+
+        Integer count = kylinTemplate.query(sql, new ResultSetExtractor<Integer>() {
+            @Override
+            public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
+                int recordNum = 0;
+                while(rs.next()){
+                    recordNum = rs.getInt(1);
+                }
+                return recordNum;
+            }
+        });
+        return count != null ? count : 0;
+    }
 }

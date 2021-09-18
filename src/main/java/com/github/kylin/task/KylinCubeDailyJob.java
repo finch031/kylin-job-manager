@@ -33,6 +33,9 @@ public class KylinCubeDailyJob {
     @Value("${spring.kylin.cube.report.dir}")
     private String cubeReportDir;
 
+    @Value("${spring.kylin.cube.report.count}")
+    private boolean cubeReportCount;
+
     @Autowired
     private KylinCubeSegmentChecker kylinCubeSegmentChecker;
 
@@ -90,8 +93,9 @@ public class KylinCubeDailyJob {
      * 每日cube报告.
      * 默认每天上午10点30分触发一次.
      * */
-    @Scheduled(cron = "0 45 13 ? * *")
+    @Scheduled(cron = "0 29 15 ? * *")
     private void dailyCubeReporter(){
+        long startTs = System.currentTimeMillis();
         String reportName = "cube_report_" + Utils.formatDateTime(System.currentTimeMillis(),"yyyyMMdd") + ".csv";
         String reportFile = cubeReportDir + "/" + reportName;
 
@@ -103,14 +107,24 @@ public class KylinCubeDailyJob {
             cubeMap.put(kylinCube.getCubeName(),kylinCube);
         }
 
+        int cubeIdx = 0;
         for (String defaultCube : kylinCubeSegmentChecker.getDefaultCubes()) {
+            cubeIdx++;
             KylinCube kylinCube = cubeMap.get(defaultCube);
+            List<KylinSegment> segments = kylinCube.getSegments();
 
-            reportLines.add("cube名称,segment个数,cube状态,cube最后修改时间");
-            String cubeHeader = defaultCube + "," + kylinCube.getSegments().size() + "," + kylinCube.getStatus() + "," + kylinCube.getLastModifiedTime();
+            if(cubeIdx == 1){
+                reportLines.add("   cube编号:" + cubeIdx);
+            }else{
+                reportLines.add("cube编号:" + cubeIdx);
+            }
+
+            // cube总大小.
+            long cubeSegmentTotalSize = segments.stream().mapToLong(x -> 1000 * Long.parseLong(x.getSizeKB())).sum();
+            reportLines.add("cube名称,segment总个数,segment总大小,cube状态,cube最后修改时间");
+            String cubeHeader = defaultCube + "," + kylinCube.getSegments().size() + "," + Utils.formatBytes(cubeSegmentTotalSize) + "," + kylinCube.getStatus() + "," + kylinCube.getLastModifiedTime();
             reportLines.add(cubeHeader);
 
-            List<KylinSegment> segments = kylinCube.getSegments();
             segments.sort(new Comparator<KylinSegment>() {
                 @Override
                 public int compare(KylinSegment o1, KylinSegment o2) {
@@ -141,12 +155,36 @@ public class KylinCubeDailyJob {
                 reportLines.add(sb.toString());
             }
 
+            // kylin cube中所有segment的记录数统计(资源消耗操作,默认不开启).
+            if(cubeReportCount){
+                // cube所有segment记录数.
+                int cubeTotalSegmentRecordCount = kylinJdbcService.cubeSegmentTotalRecordCount(defaultCube);
+
+                String now = Utils.formatDateTime(System.currentTimeMillis(),"yyyy-MM-dd");
+                String t_1Date = Utils.dateShift(now,"yyyy-MM-dd",-1);
+                String t_2Date = Utils.dateShift(now,"yyyy-MM-dd",-2);
+                String t_3Date = Utils.dateShift(now,"yyyy-MM-dd",-3);
+
+                // t-1日segment记录数
+                int t_1Count = kylinJdbcService.cubeSegmentRecordCount(defaultCube,t_1Date);
+                // t-2日segment记录数
+                int t_2Count = kylinJdbcService.cubeSegmentRecordCount(defaultCube,t_2Date);
+                // t-3日segment记录数
+                int t_3Count = kylinJdbcService.cubeSegmentRecordCount(defaultCube,t_3Date);
+
+                reportLines.add("cube总记录数,t-1日记录数,t-2日记录数,t-3日记录数");
+                reportLines.add(cubeTotalSegmentRecordCount + "," + t_1Count + "," + t_2Count + "," + t_3Count);
+            }
+
             reportLines.add(Utils.LINE_SEPARATOR);
         }
 
+        // 报告数据写csv文件
         Utils.writeCsvFile(reportFile,reportLines);
+
+        String reportTime = Utils.appendPosixTime(System.currentTimeMillis() - startTs);
+        LOG.info("报告生成总耗时:" + reportTime);
 
         reportLines.forEach(System.out::println);
     }
-
 }

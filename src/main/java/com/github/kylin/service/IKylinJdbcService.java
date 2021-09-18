@@ -30,4 +30,11 @@ public interface IKylinJdbcService {
      * @return segment record count.
      * */
     int cubeSegmentRecordCount(String cube,String date);
+
+    /**
+     * 查询指定cube segment的所有记录数
+     * @param cube cube名称
+     * @return segment record count.
+     * */
+    int cubeSegmentTotalRecordCount(String cube);
 }

@@ -8,10 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -178,8 +175,6 @@ public final class Utils {
                 fileWriter.write(line);
                 fileWriter.write(LINE_SEPARATOR);
             }
-
-
         }catch (IOException ioe){
             ioe.printStackTrace();
         }finally {
@@ -191,6 +186,73 @@ public final class Utils {
                 }
             }
         }
+
+        csvFileAppendBom(filePath);
+    }
+
+    private static void csvFileAppendBom(String filePath){
+        RandomAccessFile randomAccessFile = null;
+
+        try{
+            randomAccessFile = new RandomAccessFile(filePath,"rw");
+            randomAccessFile.seek(0);
+            randomAccessFile.write(0xEF);
+            randomAccessFile.write(0xBB);
+            randomAccessFile.write(0xBF);
+            randomAccessFile.close();
+        }catch (IOException ioe){
+            ioe.printStackTrace();
+        }finally {
+            if(randomAccessFile != null){
+                try{
+                    randomAccessFile.close();
+                }catch (IOException ex){
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * given a time expressed in milliseconds,
+     * append the time formatted as "hh[:mm[:ss]]".
+     * @param millis Milliseconds
+     */
+    public static String appendPosixTime(long millis) {
+        StringBuilder sb = new StringBuilder();
+        if (millis < 0) {
+            sb.append('-');
+            millis = -millis;
+        }
+
+        long hours = millis / 3600000;
+        sb.append(hours);
+        millis -= hours * 3600000;
+        if (millis == 0) {
+            return sb.toString();
+        }
+
+        sb.append(':');
+
+        long minutes = millis / 60000;
+        if (minutes < 10) {
+            sb.append('0');
+        }
+        sb.append(minutes);
+        millis -= minutes * 60000;
+        if (millis == 0) {
+            return sb.toString();
+        }
+
+        sb.append(':');
+
+        long seconds = millis / 1000;
+        if (seconds < 10) {
+            sb.append('0');
+        }
+        sb.append(seconds);
+
+        return sb.toString();
     }
 
 }

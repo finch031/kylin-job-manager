@@ -30,7 +30,6 @@ public class KylinController {
     @RequestMapping("/kylin")
     public String kylin(){
        kylinJdbcService.getCubeAllSegmentDate("driving_current_hour_detail_cube");
-
         return "";
     }
 }
