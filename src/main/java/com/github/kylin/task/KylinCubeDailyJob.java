@@ -93,7 +93,7 @@ public class KylinCubeDailyJob {
      * 每日cube报告.
      * 默认每天上午10点30分触发一次.
      * */
-    @Scheduled(cron = "0 29 15 ? * *")
+    @Scheduled(cron = "0 40 08 ? * *")
     private void dailyCubeReporter(){
         long startTs = System.currentTimeMillis();
         String reportName = "cube_report_" + Utils.formatDateTime(System.currentTimeMillis(),"yyyyMMdd") + ".csv";
