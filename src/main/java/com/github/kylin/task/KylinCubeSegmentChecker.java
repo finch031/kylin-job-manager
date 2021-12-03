@@ -37,7 +37,25 @@ public class KylinCubeSegmentChecker {
      * @return segmentInfo
      * */
     private Tuple<String,Integer> cubeDateSegmentCheck(String cube, String date){
-        int count = kylinJdbcService.cubeSegmentRecordCount(cube,date);
+        int count = -1;
+
+        int hasTriedTimes = 0;
+        boolean checkSuccess = false;
+        do{
+            // 先执行一遍循环操作
+            try{
+                count = kylinJdbcService.cubeSegmentRecordCount(cube,date);
+            }catch (Exception ex){
+                // ignores
+            }
+            hasTriedTimes++;
+
+            if(count >= 0){
+                checkSuccess = true;
+            }
+        } while (hasTriedTimes <= 5 && !checkSuccess);
+          // 符合条件,循环继续执行,否则,循环退出.
+
         return new Tuple<>(cube,count);
     }
 

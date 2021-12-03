@@ -2,6 +2,8 @@ package com.github.kylin.utils;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.ResourceUtils;
+
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -117,8 +119,12 @@ public final class Utils {
         List<String> lines = new ArrayList<>();
         try{
             // File file = ResourceUtils.getFile("classpath:" + resourceName);
-            File file = resource.getFile();
-            lines = readAllLines(file,Charset.defaultCharset());
+            // File file = resource.getFile();
+            // lines = readAllLines(file,Charset.defaultCharset());
+
+            // resource需使用getInputStream,若使用getFile出错!
+            InputStream is = resource.getInputStream();
+            lines = readAllLines(is,Charset.defaultCharset());
         }catch (IOException ioe){
             ioe.printStackTrace();
         }
@@ -135,6 +141,24 @@ public final class Utils {
 
     private static List<String> readAllLines(File file, Charset charset) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
+        try {
+            List<String> result = new ArrayList<>();
+            for (;;) {
+                String line = reader.readLine();
+                if (line == null){
+                    break;
+                }
+                result.add(line);
+            }
+            return result;
+        }
+        finally {
+            reader.close();
+        }
+    }
+
+    private static List<String> readAllLines(InputStream is, Charset charset) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is, charset));
         try {
             List<String> result = new ArrayList<>();
             for (;;) {

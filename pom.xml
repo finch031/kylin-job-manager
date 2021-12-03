@@ -57,7 +57,7 @@
         <lombok.version>1.18.12</lombok.version>
         <httpclient.version>4.5.12</httpclient.version>
 
-        <main.class>com.github.client.TcpPacketClient</main.class>
+        <main.class>com.github.kylin.KylinJobManager</main.class>
         <os.detected.classifier>windows</os.detected.classifier>
     </properties>
 
@@ -376,6 +376,17 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${springboot.version}</version>
+                <configuration>
+                    <fork>true</fork>
+                    <mainClass>com.github.kylin.KylinJobManager</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
 

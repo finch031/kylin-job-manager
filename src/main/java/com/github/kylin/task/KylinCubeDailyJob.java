@@ -47,9 +47,9 @@ public class KylinCubeDailyJob {
 
     /**
      * 每日缺失cube任务构建.
-     * 默认每天上午9点15分触发一次.
+     * 默认每天上午10点30分触发一次.
      * */
-    @Scheduled(cron = "0 15 09 ? * *")
+    @Scheduled(cron = "0 30 10 ? * *")
     private void dailyMissingCubeJobRunner(){
         String now = Utils.formatDateTime(System.currentTimeMillis(),"yyyy-MM-dd");
         String buildDate = Utils.dateShift(now,"yyyy-MM-dd",-1);
@@ -93,7 +93,7 @@ public class KylinCubeDailyJob {
      * 每日cube报告.
      * 默认每天上午10点30分触发一次.
      * */
-    @Scheduled(cron = "0 40 08 ? * *")
+    // @Scheduled(cron = "0 30 10 ? * *")
     private void dailyCubeReporter(){
         long startTs = System.currentTimeMillis();
         String reportName = "cube_report_" + Utils.formatDateTime(System.currentTimeMillis(),"yyyyMMdd") + ".csv";
