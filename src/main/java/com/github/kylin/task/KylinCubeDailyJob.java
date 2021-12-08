@@ -90,6 +90,46 @@ public class KylinCubeDailyJob {
     }
 
     /**
+     * 缺失cube任务检测与构建(用于rest api手动触发)
+     * @param checkDate 检测日期
+     * */
+    public void missingCubeJobRunner(String checkDate){
+        List<Tuple<String,Integer>> cubeSegmentInfoList =  kylinCubeSegmentChecker.allCubeDateSegmentCheck(checkDate);
+        for (Tuple<String, Integer> segmentInfo : cubeSegmentInfoList) {
+            // 当前时间点segment仍然无数据,判定脚本调度构建任务异常.
+            if(segmentInfo.v2() == 0){
+                String cube = segmentInfo.v1();
+                List<KylinSegment> cubeSegments = kylinRestService.getKylinCubeSegments(cube);
+                boolean segmentOverlappedFlag = false;
+                for (KylinSegment segment : cubeSegments) {
+                    String dateRangeStart = segment.getDateRangeStart();
+                    String dateRangeEnd = segment.getDateRangeEnd();
+                    // 判断构建任务的时间范围上是否段重叠
+                    if(Utils.isSegmentOverlapped(checkDate,"yyyy-MM-dd",Long.parseLong(dateRangeStart),Long.parseLong(dateRangeEnd))){
+                        // 重叠段的大小或记录数大于0才最终确认为段重叠
+                        if(Integer.parseInt(segment.getSizeKB()) > 0 || Integer.parseInt(segment.getInputRecords()) > 0){
+                            segmentOverlappedFlag = true;
+                        }
+                    }
+                }
+
+                if(!segmentOverlappedFlag){
+                    LOG.warn(cube + " T-1日:" + checkDate + " segment无数据,启动缺失cube任务构建...");
+                    long buildStartTs = Utils.startTimeStampOfDate(checkDate,"yyyy-MM-dd");
+                    long buildStopTs = buildStartTs + 86400000L;
+                    JSONObject buildResponse = kylinRestService.cubeBuild(cube,buildStartTs,buildStopTs);
+                    LOG.warn(cube + "任务构建完成:");
+                    LOG.warn(buildResponse.toJSONString());
+                }else {
+                    LOG.warn(cube + " T-日:" + checkDate + " segment和已有segment发生重叠,任务构建终止!");
+                }
+
+                Utils.sleepQuietly(10 * 1000);
+            }
+        }
+    }
+
+    /**
      * 每日cube报告.
      * 默认每天上午10点30分触发一次.
      * */

@@ -5,7 +5,10 @@ import com.alibaba.fastjson.JSONObject;
 import com.github.kylin.model.KylinCube;
 import com.github.kylin.model.KylinErrorJob;
 import com.github.kylin.service.IKylinRestService;
+import com.github.kylin.task.KylinCubeDailyJob;
+import com.github.kylin.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +25,9 @@ public class KylinRestController {
     @Autowired
     private IKylinRestService kylinRestService;
 
+    @Autowired
+    private KylinCubeDailyJob kylinCubeDailyJob;
+
     @RequestMapping("/cubes")
     public String kylinCubes(){
         List<KylinCube> kylinCubes = kylinRestService.getKylinCubes();
@@ -29,25 +35,44 @@ public class KylinRestController {
     }
 
     @RequestMapping("/error_jobs")
-    public String kylinJobs(){
-        List<KylinErrorJob> errorJobs = kylinRestService.getKylinErrorJobs("motor_con_temp_detail_cube",8,4);
+    public String kylinJobs(String cube){
+        if(cube == null || cube.isEmpty()){
+            return "无效cube参数!";
+        }
+        List<KylinErrorJob> errorJobs = kylinRestService.getKylinErrorJobs(cube,8,4);
         return JSONArray.toJSONString(errorJobs);
     }
 
     @RequestMapping("/job_resume")
-    public String kylinCubeJobResume(){
-        return kylinRestService.cubeJobResume("9c28f8d7-7835-ea69-1008-129d8a97ec23") + "";
+    public String kylinCubeJobResume(String jobId){
+        if(jobId == null || jobId.isEmpty()){
+            return "无效job id参数!";
+        }
+        return kylinRestService.cubeJobResume(jobId) + "";
     }
 
     @RequestMapping(value = "/build")
-    public String kylinBuild(){
-        JSONObject response = kylinRestService.cubeBuild("driving_speed_hour_detail_cube",1621180800000L,1621267200000L);
+    public String kylinBuild(String cube,long startTs,long stopTs){
+        if(cube == null || cube.isEmpty() || startTs >= stopTs || startTs <= 0){
+            return "无效cube或时间参数!";
+        }
+        JSONObject response = kylinRestService.cubeBuild(cube,startTs,stopTs);
         return response.toJSONString();
     }
 
     @RequestMapping(value = "/segment_delete")
-    public String kylinCubeSegmentDelete(){
-        JSONArray response = kylinRestService.cubeSegmentDelete("driving_speed_hour_detail_cube","20210517000000_20210518000000");
+    public String kylinCubeSegmentDelete(String cube,String segment){
+        if(cube == null || cube.isEmpty() || segment == null || segment.isEmpty()){
+            return "无效cube或segment参数!";
+        }
+        JSONArray response = kylinRestService.cubeSegmentDelete(cube,segment);
         return response.toJSONString();
+    }
+
+    @PostMapping("/missing_cube_build")
+    public void missingCubeBuild(String date){
+        if(date != null && !date.isEmpty() && Utils.isValidDate(date)){
+            kylinCubeDailyJob.missingCubeJobRunner(date);
+        }
     }
 }
